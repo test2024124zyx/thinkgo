@@ -22,6 +22,8 @@ const (
 )
 
 var (
+	// ErrContainerBindingNotFound 表示容器中没有所请求的服务绑定。
+	ErrContainerBindingNotFound = errors.New("binding not found")
 	// ErrContainerScopeRequired 表示 Scoped 绑定不能从根容器解析。
 	ErrContainerScopeRequired = errors.New("container scope is required")
 	// ErrContainerScopeClosed 表示请求或任务作用域已经进入关闭阶段。
@@ -186,7 +188,7 @@ func (c *Container) makeWithResolution(scope *resolution, abstract string, param
 	registered, ok := state.bindings[abstract]
 	if !ok {
 		state.lock.RUnlock()
-		return nil, fmt.Errorf("binding not found: %s", abstract)
+		return nil, fmt.Errorf("%w: %s", ErrContainerBindingNotFound, abstract)
 	}
 
 	if registered.lifecycle == Scoped {
@@ -223,7 +225,7 @@ func (c *Container) makeWithResolution(scope *resolution, abstract string, param
 	registered, ok = state.bindings[abstract]
 	if !ok {
 		state.lock.Unlock()
-		return nil, fmt.Errorf("binding not found: %s", abstract)
+		return nil, fmt.Errorf("%w: %s", ErrContainerBindingNotFound, abstract)
 	}
 	if registered.lifecycle == Factory {
 		state.lock.Unlock()

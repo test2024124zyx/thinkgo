@@ -34,6 +34,26 @@ func TestContainerBindAndMake(t *testing.T) {
 	}
 }
 
+// TestContainerMakeExposesMissingBindingError 验证直接和嵌套解析的错误链。
+func TestContainerMakeExposesMissingBindingError(t *testing.T) {
+	const service = "optional-service"
+	container := NewContainer()
+	scope := container.NewScope()
+	t.Cleanup(func() { _ = scope.Close() })
+	for _, makeService := range []func(string, ...any) (any, error){container.Make, scope.Make} {
+		if value, err := makeService(service); value != nil || !errors.Is(err, ErrContainerBindingNotFound) ||
+			err.Error() != "binding not found: "+service {
+			t.Fatalf("缺失绑定应提供可识别的错误和服务名: %v %v", value, err)
+		}
+	}
+	container.BindFactory("dependent", func(current *Container) (any, error) {
+		return current.Make(service)
+	})
+	if _, err := scope.Make("dependent"); !errors.Is(err, ErrContainerBindingNotFound) {
+		t.Fatalf("嵌套工厂应保留缺失绑定错误: %v", err)
+	}
+}
+
 // TestContainerInstance 验证 Instance 绑定
 func TestContainerInstance(t *testing.T) {
 	c := NewContainer()
